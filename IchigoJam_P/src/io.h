@@ -20,11 +20,14 @@
 #define PLEN_MAX 2000
 #define ANA_THRESHOLD (1024 / 4)
 
-//ラズパイの動作クロックは252MHz(PicoDVIでオーバークロックしている)、IchigoJamのPWMは1周期20msなので50Hz
+//ラズパイの動作クロックはモードにより異なる (DVI:252MHz、NTSC:157.5MHz)
+//PWMのカウントクロックを常に1MHzにする (clkdiv = sysクロック/1MHz)
+//IchigoJamのPWMは1周期20msなので50Hz
 //https://rikei-tawamure.com/entry/2021/02/08/213335#PWM%E7%94%A8%E3%82%AB%E3%82%A6%E3%83%B3%E3%82%BF PWMの計算方法は左記参照
-#define PICO_CLOCK_FREQ (DVI_TIMING.bit_clk_khz * 1000)
-#define CLKDIV (PICO_CLOCK_FREQ / (1000 * 1000))//=252
-#define PWM_WRAP (PICO_CLOCK_FREQ / (CLKDIV * 50) - 1)
+#define PWM_CLKDIV_MHZ() (clock_get_hz(clk_sys) / (1000.0f * 1000.0f))
+#define PWM_WRAP 19999 // 1MHz / 50Hz - 1
+
+void sound_reconfig();//sound.hで定義 (io.hより後ろにincludeされるため前方宣言)
 
 static uint8 in_pins[] = { IN1, IN2, IN3, IN4, OUT1, OUT2, OUT3, OUT4, BTN, OUT5, OUT6 };
 static uint8 out_pins[] = { OUT1, OUT2, OUT3, OUT4, OUT5, OUT6, LED, IN1, IN2, IN3, IN4 };
@@ -42,10 +45,19 @@ void IJB_pwm(int port, int plen, int len) {
     uint8 pin = out_pins[port - 1];
     gpio_set_function(pin, GPIO_FUNC_PWM);
     uint slice_num = pwm_gpio_to_slice_num(pin);
-    pwm_set_clkdiv(slice_num, CLKDIV);
+    pwm_set_clkdiv(slice_num, PWM_CLKDIV_MHZ());
     pwm_set_wrap(slice_num, PWM_WRAP);
     pwm_set_gpio_level(pin, (PWM_WRAP + 1) * plen / PLEN_MAX);
     pwm_set_enabled(slice_num, true);
+}
+
+//クロックを変更したときに、PWM出力中のOUTポートとサウンドの分周比を再設定する
+void io_reconfig_pwm() {
+    float div = PWM_CLKDIV_MHZ();
+    for (int i = 0; i < 6; i++) {//OUT1-6
+        pwm_set_clkdiv(pwm_gpio_to_slice_num(out_pins[i]), div);
+    }
+    sound_reconfig();
 }
 
 bool is_adc_pin(uint pin) {
@@ -186,6 +198,17 @@ INLINE void IJB_clo() {
 
 void IJB_dac(int port, int val) {
     //何もしない
+}
+
+//BASICのINポート番号→GPIO番号 (4K版、IR.INコマンド用、GivetakeJam_P準拠)
+static int ir_port_to_gpio(int port) {
+    switch (port) {
+        case 1: return IN1;
+        case 2: return IN2;
+        case 3: return IN3;
+        case 4: return IN4;
+    }
+    return -1;
 }
 
 #endif

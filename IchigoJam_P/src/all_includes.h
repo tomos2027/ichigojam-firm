@@ -31,6 +31,9 @@
 #include "common_dvi_pin_configs.h"
 #include "sprite.h"
 
+//NTSCコンポジット出力 (rp2040_pwm_ntsc_textgraph)
+#include "rp2040_pwm_ntsc_textgraph.h"
+
 #include "tusb.h"
 #include "hid.h"
 

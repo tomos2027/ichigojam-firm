@@ -20,6 +20,7 @@ add_subdirectory(PicoDVI/software/libsprite)
 
 add_executable(IchigoJam_P
 	src/main.c
+	src/ntsc/rp2040_pwm_ntsc_textgraph.c
 )
 
 pico_set_linker_script(IchigoJam_P ${CMAKE_CURRENT_LIST_DIR}/memmap_ichigojam_p.ld)
@@ -28,6 +29,7 @@ target_include_directories(IchigoJam_P PUBLIC
 	${CMAKE_CURRENT_LIST_DIR}
 	# Make sure TinyUSB can find tusb_config.h
 	${CMAKE_CURRENT_LIST_DIR}/src
+	${CMAKE_CURRENT_LIST_DIR}/src/ntsc
 )
 
 # PicoDVI/software/apps/mandelbrot/CMakeLists.txt から引用
@@ -47,6 +49,7 @@ target_link_libraries(IchigoJam_P PUBLIC
 	hardware_watchdog
 	hardware_adc
 	hardware_pwm
+	hardware_dma
 	hardware_i2c
 	hardware_sleep
 )

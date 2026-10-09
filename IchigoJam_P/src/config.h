@@ -24,7 +24,10 @@
 
 #define ENABLE_I2C_BPS
 
-#define N_FLASH_STORAGE 100
+#define NTSC_PIN 3 // NTSCコンポジット映像出力ピン (SWITCH 1で有効)
+
+//4K版: 1プログラム4096バイト化に伴い保存本数を100→25に (1本=フラッシュ1セクタ4096バイト、GivetakeJam_P準拠)
+#define N_FLASH_STORAGE 25
 
 #define VERSION15
 

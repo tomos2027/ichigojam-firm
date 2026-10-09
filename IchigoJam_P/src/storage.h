@@ -8,8 +8,9 @@
 
 #define FLASH_IJ_OFFSET (0x200000 - FLASH_SECTOR_SIZE * 2)//SAVE0,LOAD0で操作するセクタの先頭(一番最後のセクタはKBDの設定値などを保存するのに使うので、その1つ前のセクタ)
 #define EEPROM_OFFSET 100
-#define EEPROM_SIZE 128
-#define SIZELIMIT (IJB_SIZEOF_LIST - 2)//=1プログラムのサイズ=1024
+//4K版: 外部EEPROMのスロット数 (1スロット=4096バイト、32スロット=128KB、表示/保存範囲は100..131固定)
+#define EEPROM_SIZE 32
+#define SIZELIMIT (IJB_SIZEOF_LIST - 2)//=1プログラムのサイズ (4K版: 4096)
 
 INLINE int IJB_file() {
     return _g.lastfile;

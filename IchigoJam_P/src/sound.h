@@ -5,22 +5,23 @@
 #define SOUND_PIN 20
 
 static uint slice_num;
+static uint16 prev_tone = 0;
 
 void sound_init() {
     _g.psgratio = 1;
     gpio_set_function(SOUND_PIN, GPIO_FUNC_PWM);
     slice_num = pwm_gpio_to_slice_num(SOUND_PIN);
-    pwm_set_clkdiv(slice_num, CLKDIV);
+    pwm_set_clkdiv(slice_num, PWM_CLKDIV_MHZ());
     pwm_set_wrap(slice_num, 0);//適当に小さい値を設定しておかないと起動音が鳴らない
     pwm_set_enabled(slice_num, true);
+    prev_tone = 0;
 }
 
 void set_tone() {
-    static uint16 prev_tone = 0;
     if (prev_tone != _g.psgtone) {
         if (_g.psgtone) {//オン
             int freq = 60 * 261 / 2 / _g.psgtone;   //IchigoJamのソースの式 / 2
-            int wrap = PICO_CLOCK_FREQ / (freq * CLKDIV) - 1;
+            int wrap = 1000000 / freq - 1;//PWMのカウントクロックは1MHzなのでそのまま周波数から計算できる
             if (wrap < 0) {
                 wrap = 0;
             } else if (wrap > 0xffff) {
@@ -34,6 +35,12 @@ void set_tone() {
         }
     }
     prev_tone = _g.psgtone;
+}
+
+//クロックを変更したときに分周比を再設定する
+void sound_reconfig() {
+    pwm_set_clkdiv(slice_num, PWM_CLKDIV_MHZ());
+    prev_tone = 0;//次のset_toneでwrapを再計算させる
 }
 
 static void sound_switch(int on) {

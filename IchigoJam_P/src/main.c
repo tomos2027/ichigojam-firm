@@ -27,7 +27,7 @@ STATIC void exec(char* s) {
 
 int main() {
     pico_init();
-    picodvi_init();
+    video_output_init();
     ichigojam_init();
 
     char* linebuf = (char*)ram + OFFSET_RAM_LINEBUF;

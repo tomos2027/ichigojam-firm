@@ -4,7 +4,11 @@
 
 #define PICO_LED_PIN 25
 
-static uint scb_orig, clock0_orig, clock1_orig;
+//ウォッチドッグ: core0が固まったらこの秒数後に自動再起動する (電源抜き差しでハングした場合の自動復帰)
+//timer()内でwatchdog_update()を呼んで生きていることを伝える
+#define WATCHDOG_TIMEOUT_MS 8000
+
+static uint scb_orig;
 static bool awake;
 bool is_deep_sleeping = false;
 
@@ -16,63 +20,27 @@ int getSleepFlag() {
 
 void record_clocks() {
     scb_orig = scb_hw->scr;
-    clock0_orig = clocks_hw->sleep_en0;
-    clock1_orig = clocks_hw->sleep_en1;
 }
 
 void recover_from_sleep() {
+    scb_hw->scr = scb_orig;//スリープ時に立ったSLEEPDEEPビットを解除
 
-    //Re-enable ring Oscillator control
-    rosc_write(&rosc_hw->ctrl, ROSC_CTRL_ENABLE_BITS);
-
-    //reset procs back to default
-    scb_hw->scr = scb_orig;
-    clocks_hw->sleep_en0 = clock0_orig;
-    clocks_hw->sleep_en1 = clock1_orig;
-
-    //reset clocks
-    clocks_init();
-    set_sys_clock_khz(DVI_TIMING.bit_clk_khz, true);
+    //rosc再開、クロック復元(clocks_init相当)、UART再設定
+    sleep_power_up();
+    set_sys_clock_khz(video_output_mode == VIDEO_MODE_NTSC ? 157500 : DVI_TIMING.bit_clk_khz, true);
     set_uart_bps();
-
-    return;
+    io_reconfig_pwm();//クロックが変わったのでPWMの分周比を再設定
+    //スリープ中はtimer()が止まるためウォッチドッグを切ってあるので、ここで再有効化する
+    watchdog_enable(WATCHDOG_TIMEOUT_MS, true);
 }
 
-static void sleep_callback(void) {
+static void sleep_callback(uint alarm_num) {
     awake = true;
 }
 
+//指定した秒数だけディープスリープする
 static void rtc_sleep(int sec) {
-    sec++;//スリープする時間は (t_alarm と tの差) - 1秒、なので調整する
-    int min = sec / 60;
-    sec = sec % 60;
-
-    datetime_t t = {
-            .year = 2000,
-            .month = 1,
-            .day = 1,
-            .dotw = 0,
-            .hour = 0,
-            .min = 0,
-            .sec = 0
-    };
-
-    // Alarm 10 seconds later
-    datetime_t t_alarm = {
-            .year = 2000,
-            .month = 1,
-            .day = 1,
-            .dotw = 0,
-            .hour = 0,
-            .min = min,
-            .sec = sec
-    };
-
-    // Start the RTC
-    rtc_init();
-    rtc_set_datetime(&t);
-
-    sleep_goto_sleep_until(&t_alarm, &sleep_callback);
+    sleep_goto_sleep_for(sec * 1000, sleep_callback);
 }
 
 //RTCの仕様上、1秒刻みでしかディープスリープの秒数を指定できない
@@ -82,6 +50,7 @@ static inline void enterDeepSleep(int sec) {
     }
     bool active = video_active();
     video_off(0);
+    watchdog_disable();//スリープ中はtimer()が動かないのでウォッチドッグを止める (recover_from_sleepで再有効化)
     //pico-playground/sleep/hello_sleep/hello_sleep.c　10秒スリープするプログラムと書かれているが、実際は9秒
     //https://ghubcoder.github.io/posts/awaking-the-pico/ 参照
     record_clocks();
@@ -109,6 +78,7 @@ static void IJB_sleep() {
     gpio_init(BTN);//ADCのままだと正しく反応しない
     gpio_pull_up(BTN);
     video_off(0);
+    watchdog_disable();//スリープ中はtimer()が動かないのでウォッチドッグを止める (この関数は最終的にウォッチドッグで意図的に再起動する)
     //pico-playground/sleep/hello_dormant/hello_dormant.c 参照
     record_clocks();
     sleep_run_from_xosc();
