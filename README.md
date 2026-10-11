@@ -14,6 +14,11 @@
 
 Copyright 2014-2025 the IchigoJam authors. All rights reserved. MIT license.
 
+### 4K版拡張 / 4K version extensions (GivetakeJam_P準拠 / based on GivetakeJam_P)
+
+4K版の拡張機能 (プログラム領域4096バイト化、拡張配列変数、`IR.IN`、`ENV.IN`等) は [GivetakeJam_P](https://github.com/Canon-boy4/ichigojam-firm) を参考にした実装であり、この拡張分は GivetakeJam_P と同じライセンス (MIT license, Copyright 2014-2025 the IchigoJam authors) に従います。
+The 4K version extensions (4096-byte program area, extended array variables, `IR.IN`, `ENV.IN`, etc.) are implemented with reference to [GivetakeJam_P](https://github.com/Canon-boy4/ichigojam-firm), and these extensions follow the same license as GivetakeJam_P (MIT license, Copyright 2014-2025 the IchigoJam authors).
+
 ### NTSC出力コード / NTSC output code (`IchigoJam_P/src/ntsc/`)
 
 NTSCコンポジット映像出力コード (`IchigoJam_P/src/ntsc/`) は KenKen 氏による著作物です。
