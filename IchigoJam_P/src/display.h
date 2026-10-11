@@ -40,7 +40,7 @@ void video_off(int clkdiv) {
     }
 }
 
-inline int video_active() {
+static inline int video_active() {
     if (video_output_mode == VIDEO_MODE_NTSC) {
         return ntsc_active();
     }

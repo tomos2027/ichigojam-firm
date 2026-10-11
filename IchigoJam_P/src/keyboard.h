@@ -37,12 +37,28 @@ INLINE void IJB_kbd(uint mode) {
     uint32_t offset = get_config_offset();
     memcpy(tflash, get_flash(offset), FLASH_SECTOR_SIZE);
     tflash[0] = mode;
-    video_off(0);
-    int save = save_and_disable_interrupts();
-    flash_range_erase(offset, FLASH_SECTOR_SIZE);
-    flash_range_program(offset, tflash, FLASH_SECTOR_SIZE);
-    video_on();
-    restore_interrupts(save);
+    if (ntsc_active()) {
+        //NTSC動作中は映像を止めずに書き込む (IJB_saveと同じ方式:
+        //DMAチェーンはSRAMだけで動くため割り込み禁止中も同期信号は保たれ、画面は書込中一時フリーズするだけ)
+        int save = save_and_disable_interrupts();
+        flash_range_erase(offset, FLASH_SECTOR_SIZE);
+        flash_range_program(offset, tflash, FLASH_SECTOR_SIZE);
+        restore_interrupts(save);
+        //長い割り込み禁止で走査線カウンタが表示位置からずれたので、位相を合わせ直す
+        ntsc_release();
+        ntsc_init();
+    } else {
+        //DVIモードは書込中に映像を維持できないため、停止/再開する (停止状態だったら再開しない)
+        bool active = video_active();
+        video_off(0);
+        int save = save_and_disable_interrupts();
+        flash_range_erase(offset, FLASH_SECTOR_SIZE);
+        flash_range_program(offset, tflash, FLASH_SECTOR_SIZE);
+        if (active) {
+            video_on();
+        }
+        restore_interrupts(save);
+    }
 }
 
 INLINE void uart_init_IJ() {

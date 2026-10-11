@@ -34,6 +34,8 @@ extern const uint8 CHAR_PATTERN[];
 static void video_init(void);
 static void video_on();
 static void video_off(int clkdiv);
+static int video_active();//display.hで定義 (映像出力が動作中か)
+void ntsc_init();//display.h・init.hで定義 (NTSC映像の初期化・再開)
 static int16 video_tick(int n);
 S_INLINE void video_clt();
 static void screen_clear(void);
